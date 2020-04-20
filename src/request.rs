@@ -45,6 +45,65 @@ fn is_null(request: MPI_Request) -> bool {
     request == unsafe_extern_static!(ffi::RSMPI_REQUEST_NULL)
 }
 
+///test
+#[must_use]
+#[derive(Debug)]
+pub struct ImmRequest {
+    request: Option<MPI_Request>,
+    buffer: Vec<u8>,
+}
+
+impl Drop for ImmRequest {
+    fn drop(&mut self) {
+        panic!("request was dropped without being completed");
+    }
+}
+
+impl ImmRequest {
+    ///test
+    pub unsafe fn from_raw(request: MPI_Request, buffer: Vec<u8>) -> Self {
+        debug_assert!(!is_null(request));
+        Self {
+            request: Some(request),
+            buffer,
+        }
+    }
+    ///test
+    pub fn wait(self) {
+        self.wait_with(unsafe { ffi::RSMPI_STATUS_IGNORE });
+    }
+    ///test
+    pub fn wait_with(self, status: *mut MPI_Status) {
+        if let Some(mut request) = self.request {
+            unsafe {
+                ffi::MPI_Wait(&mut request, status);
+                assert!(is_null(request)); // persistent requests are not supported
+            }
+        }
+
+        mem::forget(self);
+    }
+    ///test
+    pub fn test(&mut self) -> bool {
+        if let Some(request) = &mut self.request {
+            unsafe {
+                let mut status = MaybeUninit::uninit();
+                let (_, flag) =
+                    with_uninitialized(|flag| ffi::MPI_Test(request, flag, status.as_mut_ptr()));
+                if flag != 0 {
+                    assert!(is_null(*request)); // persistent requests are not supported
+                    self.request = None;
+                    true
+                } else {
+                    false
+                }
+            }
+        } else {
+            true
+        }
+    }
+}
+
 /// A request object for a non-blocking operation registered with a `Scope` of lifetime `'a`
 ///
 /// The `Scope` is needed to ensure that all buffers associated request will outlive the request

@@ -24,7 +24,7 @@ use crate::ffi::{MPI_Message, MPI_Status};
 
 use crate::datatype::traits::*;
 use crate::raw::traits::*;
-use crate::request::{Request, Scope, StaticScope};
+use crate::request::{ImmRequest, Request, Scope, StaticScope};
 use crate::topology::traits::*;
 use crate::topology::{AnyProcess, CommunicatorRelation, Process, Rank};
 use crate::{with_uninitialized, with_uninitialized2};
@@ -805,6 +805,26 @@ pub trait Destination: AsCommunicator {
                 })
                 .1,
                 scope,
+            )
+        }
+    }
+    ///testing
+    fn immediate_synchronous_send_with_tag_noscope(&self, buf: Vec<u8>, tag: Tag) -> ImmRequest {
+        unsafe {
+            ImmRequest::from_raw(
+                with_uninitialized(|request| {
+                    ffi::MPI_Issend(
+                        buf.pointer(),
+                        buf.count(),
+                        buf.as_datatype().as_raw(),
+                        self.destination_rank(),
+                        tag,
+                        self.as_communicator().as_raw(),
+                        request,
+                    )
+                })
+                .1,
+                buf,
             )
         }
     }
