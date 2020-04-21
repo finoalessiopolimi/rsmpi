@@ -160,7 +160,7 @@ impl ImmRequest {
 }
 
 ///test
-pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<Status> {
+pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<(i32, Status)> {
     let requests_tuple: Vec<_> = requests
         .iter()
         .enumerate()
@@ -198,7 +198,12 @@ pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<Status> {
             let u_index: usize = index.try_into().expect("Error while casting i32 to usize");
             assert!(is_null(mpi_requests[u_index]));
             requests[indexes[u_index]].request = None;
-            return Some(status);
+            return Some((
+                indexes[u_index]
+                    .try_into()
+                    .expect("Error while casting usize to i32"),
+                status,
+            ));
         }
     }
     None
