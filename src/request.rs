@@ -160,7 +160,7 @@ impl ImmRequest {
 }
 
 ///test
-pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<(i32, Status)> {
+pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Result<(usize, Status), i32> {
     let requests_tuple: Vec<_> = requests
         .iter()
         .enumerate()
@@ -198,15 +198,13 @@ pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<(i32, Status)>
             let u_index: usize = index.try_into().expect("Error while casting i32 to usize");
             assert!(is_null(mpi_requests[u_index]));
             requests[indexes[u_index]].request = None;
-            return Some((
-                indexes[u_index]
-                    .try_into()
-                    .expect("Error while casting usize to i32"),
-                status,
-            ));
+            Ok((indexes[u_index], status))
+        } else {
+            Err(mpi_sys::MPI_UNDEFINED)
         }
+    } else {
+        Err(0)
     }
-    None
 }
 
 /// A request object for a non-blocking operation registered with a `Scope` of lifetime `'a`

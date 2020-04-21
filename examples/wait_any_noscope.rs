@@ -22,7 +22,7 @@ fn main() {
         }
 
         println!("World size {}", world.size());
-        while let Some((index, _status)) = mpi::request::wait_any_noscope(&mut requests) {
+        while let Ok((index, _status)) = mpi::request::wait_any_noscope(&mut requests) {
             println!("Request {} completed", index);
         }
         println!("All requests completed");
