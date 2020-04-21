@@ -55,7 +55,9 @@ pub struct ImmRequest {
 
 impl Drop for ImmRequest {
     fn drop(&mut self) {
-        panic!("request was dropped without being completed");
+        if let Some(_req) = self.request {
+            panic!("request was dropped without being completed");
+        }
     }
 }
 
@@ -102,6 +104,51 @@ impl ImmRequest {
             true
         }
     }
+}
+
+///test
+pub fn wait_any_noscope(requests: &mut Vec<ImmRequest>) -> Option<Status> {
+    let requests_tuple: Vec<_> = requests
+        .iter()
+        .enumerate()
+        .filter(|(_index, imm_req)| imm_req.request.is_some())
+        .map(|(index, imm_req)| {
+            if let Some(req) = imm_req.request {
+                (index, req)
+            } else {
+                unreachable!();
+            }
+        })
+        .collect();
+    if !requests_tuple.is_empty() {
+        let indexes: Vec<usize> = requests_tuple.iter().map(|(index, _req)| *index).collect();
+        let mut mpi_requests: Vec<*mut mpi_sys::ompi_request_t> = requests_tuple
+            .into_iter()
+            .map(|(_index, req)| req)
+            .collect();
+        let status;
+        let mut index: i32 = mpi_sys::MPI_UNDEFINED;
+        let size: i32 = mpi_requests
+            .len()
+            .try_into()
+            .expect("Error while casting usize to i32");
+        unsafe {
+            status = Status::from_raw(
+                with_uninitialized(|s| {
+                    ffi::MPI_Waitany(size, mpi_requests.as_mut_ptr(), &mut index, s);
+                    s
+                })
+                .1,
+            );
+        }
+        if index != mpi_sys::MPI_UNDEFINED {
+            let u_index: usize = index.try_into().expect("Error while casting i32 to usize");
+            assert!(is_null(mpi_requests[u_index]));
+            requests[indexes[u_index]].request = None;
+            return Some(status);
+        }
+    }
+    None
 }
 
 /// A request object for a non-blocking operation registered with a `Scope` of lifetime `'a`

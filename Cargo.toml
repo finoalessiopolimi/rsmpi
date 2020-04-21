@@ -33,3 +33,6 @@ memoffset = "0.5"
 
 [build-dependencies]
 rustc_version = "0.2"
+
+[profile.release]
+debug = true
