@@ -36,10 +36,14 @@ use std::ptr;
 use crate::ffi;
 use crate::ffi::{MPI_Request, MPI_Status};
 
+use super::Tag;
+use crate::datatype::AsDatatype;
+use crate::datatype::Collection;
+use crate::datatype::Pointer;
 use crate::point_to_point::Status;
 use crate::raw::traits::*;
+use crate::topology::Rank;
 use crate::with_uninitialized;
-
 /// Check if the request is `MPI_REQUEST_NULL`.
 fn is_null(request: MPI_Request) -> bool {
     request == unsafe_extern_static!(ffi::RSMPI_REQUEST_NULL)
@@ -49,8 +53,10 @@ fn is_null(request: MPI_Request) -> bool {
 #[must_use]
 #[derive(Debug)]
 pub struct ImmRequest {
-    request: Option<MPI_Request>,
-    buffer: Vec<u8>,
+    ///request
+    pub request: Option<MPI_Request>,
+    ///buffer
+    pub buffer: Vec<u8>,
 }
 
 impl Drop for ImmRequest {
@@ -62,6 +68,53 @@ impl Drop for ImmRequest {
 }
 
 impl ImmRequest {
+    ///test
+    pub fn new() -> Self {
+        Self {
+            request: None,
+            buffer: Vec::new(),
+        }
+    }
+
+    ///test
+    pub fn immediate_send(
+        buffer: Vec<u8>,
+        tag: Tag,
+        rank: Rank,
+        comm: *mut mpi_sys::ompi_communicator_t,
+    ) -> Self {
+        let mut immreq = ImmRequest {
+            request: None,
+            buffer,
+        };
+        let req = unsafe {
+            with_uninitialized(|request| {
+                ffi::MPI_Issend(
+                    immreq.buffer.pointer(),
+                    immreq.buffer.count(),
+                    immreq.buffer.as_datatype().as_raw(),
+                    rank,
+                    tag,
+                    comm,
+                    request,
+                )
+            })
+            .1
+        };
+        immreq.request = Some(req);
+        immreq
+    }
+
+    ///test
+    /*pub fn set_request(&mut self, request: MPI_Request, buffer: Vec<u8>) {
+        debug_assert!(!is_null(request));
+        if self.request.is_none() {
+            self.buffer = buffer;
+            self.request = Some(request);
+        } else {
+            panic!("Request replaced before completion");
+        }
+    }*/
     ///test
     pub unsafe fn from_raw(request: MPI_Request, buffer: Vec<u8>) -> Self {
         debug_assert!(!is_null(request));

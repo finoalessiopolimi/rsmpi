@@ -31,7 +31,7 @@ fn main() {
 
         thread::sleep(secs);
 
-        let (_bin, _): (Vec<u8>, _) = world.any_process().receive_vec();
-        println!("Process {} received data", world.rank());
+        let (bin, _): (Vec<u8>, _) = world.any_process().receive_vec();
+        println!("Process {} received data {:?}", world.rank(), bin);
     }
 }

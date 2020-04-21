@@ -810,23 +810,12 @@ pub trait Destination: AsCommunicator {
     }
     ///testing
     fn immediate_synchronous_send_with_tag_noscope(&self, buf: Vec<u8>, tag: Tag) -> ImmRequest {
-        unsafe {
-            ImmRequest::from_raw(
-                with_uninitialized(|request| {
-                    ffi::MPI_Issend(
-                        buf.pointer(),
-                        buf.count(),
-                        buf.as_datatype().as_raw(),
-                        self.destination_rank(),
-                        tag,
-                        self.as_communicator().as_raw(),
-                        request,
-                    )
-                })
-                .1,
-                buf,
-            )
-        }
+        ImmRequest::immediate_send(
+            buf,
+            tag,
+            self.destination_rank(),
+            self.as_communicator().as_raw(),
+        )
     }
 
     /// Initiate an immediate (non-blocking) synchronous mode send operation.
