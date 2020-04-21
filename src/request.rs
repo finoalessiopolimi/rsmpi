@@ -124,19 +124,18 @@ impl ImmRequest {
         }
     }
     ///test
-    pub fn wait(self) {
+    pub fn wait(&mut self) {
         self.wait_with(unsafe { ffi::RSMPI_STATUS_IGNORE });
     }
     ///test
-    pub fn wait_with(self, status: *mut MPI_Status) {
+    pub fn wait_with(&mut self, status: *mut MPI_Status) {
         if let Some(mut request) = self.request {
             unsafe {
                 ffi::MPI_Wait(&mut request, status);
                 assert!(is_null(request)); // persistent requests are not supported
             }
+            self.request = None;
         }
-
-        mem::forget(self);
     }
     ///test
     pub fn test(&mut self) -> bool {
