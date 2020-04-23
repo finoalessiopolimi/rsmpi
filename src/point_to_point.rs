@@ -810,6 +810,16 @@ pub trait Destination: AsCommunicator {
     }
     ///testing
     fn immediate_synchronous_send_with_tag_noscope(&self, buf: Vec<u8>, tag: Tag) -> ImmRequest {
+        ImmRequest::immediate_sync_send(
+            buf,
+            tag,
+            self.destination_rank(),
+            self.as_communicator().as_raw(),
+        )
+    }
+
+    ///testing
+    fn immediate_send_with_tag_noscope(&self, buf: Vec<u8>, tag: Tag) -> ImmRequest {
         ImmRequest::immediate_send(
             buf,
             tag,
