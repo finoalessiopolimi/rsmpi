@@ -77,7 +77,7 @@ impl ImmRequest {
     }
 
     ///test
-    pub fn immediate_send(
+    pub fn immediate_sync_send(
         buffer: Vec<u8>,
         tag: Tag,
         rank: Rank,
@@ -90,6 +90,35 @@ impl ImmRequest {
         let req = unsafe {
             with_uninitialized(|request| {
                 ffi::MPI_Issend(
+                    immreq.buffer.pointer(),
+                    immreq.buffer.count(),
+                    immreq.buffer.as_datatype().as_raw(),
+                    rank,
+                    tag,
+                    comm,
+                    request,
+                )
+            })
+            .1
+        };
+        immreq.request = Some(req);
+        immreq
+    }
+
+    ///test
+    pub fn immediate_send(
+        buffer: Vec<u8>,
+        tag: Tag,
+        rank: Rank,
+        comm: *mut mpi_sys::ompi_communicator_t,
+    ) -> Self {
+        let mut immreq = ImmRequest {
+            request: None,
+            buffer,
+        };
+        let req = unsafe {
+            with_uninitialized(|request| {
+                ffi::MPI_Isend(
                     immreq.buffer.pointer(),
                     immreq.buffer.count(),
                     immreq.buffer.as_datatype().as_raw(),
